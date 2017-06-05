@@ -1,0 +1,158 @@
+---
+title: "world money_ball - kaggle dataset"
+author: "patrick mcdevitt (& collaboration with preeti swaminathan)"
+date: "04 juin 2017"
+output: pdf_document
+classoption: landscape
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+
+library(ggplot2)
+library(MASS)
+library(car)
+library(moments)
+library(cowplot)
+library(grid)
+library(gridExtra)
+
+home_dir <- "~/_smu/_src/money_ball/"
+setwd(home_dir)
+
+data_dir <- "./data"
+
+
+```
+
+## money_ball - Regression Project -
+
+
+### __Intro__  
+
+*** 
+The following __Context__ and __Content__ is from : https://www.kaggle.com/unsdsn/world-money_ball  
+
+
+
+#### __Objective__
+
+Within the context of __World money_ball Day__ explore the data available from the the United Nations survey and idneitfy the characteristics that are associated with higher __money_ball__ scores
+
+*** 
+### __Descriptive statistics__  
+
+*** 
+
+### __Analysis__  
+
+*** 
+
+### __Interpretation__  
+
+*** 
+
+### __Conclusion__  
+
+*** 
+
+
+  
+  
+#### __Setup some data directories  
+
+```{r read data, include = FALSE, message = FALSE}
+
+	setwd(home_dir)
+	setwd(data_dir)
+
+	mlb <- read.csv("moneyball.csv", stringsAsFactors = FALSE)
+	setwd(home_dir)
+
+	names(mlb) <- tolower(names(mlb))
+	
+	for (i in 2:(length(mlb)))
+	{
+		if (class(mlb[,i]) == "character")
+		{
+			mlb[,i] <- factor (mlb[,i])
+		}
+	}
+```
+
+#### __Remove extreme outliers from each column of numerical data__  
+
+```{r remove outliers, include = FALSE, message = FALSE}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	remove outliers ... more than 5 sigma from mean value
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	
+	for (i in 3 : length(mlb))
+	{
+		if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric")
+		{
+			mlb[,i][which(scale(mlb[,i]) > 5)] <- NA
+			mlb[,i][which(scale(mlb[,i]) < -5)] <- NA
+		}
+	}
+
+```
+
+```{r plot base data, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	make some plots for numeric variables .....
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+	for (i in 3 : length(mlb))
+	{
+		if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric" || class(mlb[,i]) == "matrix")
+		{
+				  
+			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
+			par (mfrow = c (1, 3))
+
+			hist(mlb[,i], main = names(mlb[i]), cex.lab = 3, cex.main = 3)
+			if (skewness(mlb[,i], na.rm = TRUE) < 0)
+			{
+				txt_pos <- "topleft"
+			}
+			else {
+				txt_pos <- "topright"
+			}
+			legend(txt_pos, legend = c(paste("Mean =", round(mean(mlb[,i], na.rm = TRUE), 1)),
+                            paste("Median =",round(median(mlb[,i], na.rm = TRUE), 1)),
+                            paste("Std.Dev =", round(sd(mlb[,i], na.rm = TRUE), 1)), 
+                            paste("Skewness =", round(skewness(mlb[,i], na.rm = TRUE), 1))), 
+                  bty = "n", cex = 3)
+			
+			
+			plot(mlb$target_wins  ~ mlb[,i], col = "blue", cex = 3, cex.lab = 3, cex.axis = 3, cex.main = 3,
+				 	ylab = "money_ball Score",
+				  	xlab = names(mlb[i]),
+				  	main = "Independent variable vs. money_ball Score")
+			abline(lm(mlb$target_wins ~ mlb[,i]))
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	look at residuals from one-variable linear fit			
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+			fit <- lm(mlb$target_wins ~ mlb[,i], na.action = na.exclude)
+			res <- resid(fit)
+			plot (mlb[,i], res, cex = 3, cex.lab = 3, cex.axis = 3, cex.main = 3,
+				  ylab = "Residuals",
+				  xlab = names(mlb[i]),
+				  main = "Residuals from Linear Fit",
+				  col = "magenta")
+			abline (0, 0)
+			
+		}
+		dev.off()
+	}
+
+```
+#### __Make first data visualization plot for each column of dataset__  
