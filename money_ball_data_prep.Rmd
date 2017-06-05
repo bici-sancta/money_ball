@@ -25,7 +25,6 @@ setwd(home_dir)
 
 data_dir <- "./data"
 
-
 ```
 
 ## money_ball - Regression Project -
