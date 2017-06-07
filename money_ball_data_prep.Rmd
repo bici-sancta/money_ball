@@ -107,15 +107,36 @@ Within the context of __World money_ball Day__ explore the data available from t
 # ...	make some plots for numeric variables .....
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+	cx_scale = 1
+# ... 	use cx_scale = 1 for in-line html knitted docs
+# ...	use cx_scale = 3 for pdf landscape mode knitted docs
+
+	par (mfrow = c (1, 2))
+
+	plot(mlb$target_wins, col = "darkgoldenrod",
+		cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
+	  	xlab = names(mlb[i]),
+	  	main = "Dependent variable - Target Wins sequence")
+
+	plot(mlb$target_wins/162, col = "sienna3",
+		cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
+	  	xlab = names(mlb[i]),
+	  	main = "Dependent variable - Percentage Wins")
+
 	for (i in 3 : length(mlb))
 	{
 		if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric" || class(mlb[,i]) == "matrix")
 		{
 				  
-			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
-			par (mfrow = c (1, 3))
+#			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
+			par (mfrow = c (1, 4))
 
-			hist(mlb[,i], main = names(mlb[i]), cex.lab = 3, cex.main = 3)
+			plot(mlb[,i], col = "cyan",
+				 cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
+				  	xlab = names(mlb[i]),
+				  	main = "Independent variable sequence")
+
+			hist(mlb[,i], main = names(mlb[i]), cex.lab = cx_scale, cex.main = cx_scale)
 			if (skewness(mlb[,i], na.rm = TRUE) < 0)
 			{
 				txt_pos <- "topleft"
@@ -127,10 +148,10 @@ Within the context of __World money_ball Day__ explore the data available from t
                             paste("Median =",round(median(mlb[,i], na.rm = TRUE), 1)),
                             paste("Std.Dev =", round(sd(mlb[,i], na.rm = TRUE), 1)), 
                             paste("Skewness =", round(skewness(mlb[,i], na.rm = TRUE), 1))), 
-                  bty = "n", cex = 3)
+                  bty = "n", cex = cx_scale)
 			
 			
-			plot(mlb$target_wins  ~ mlb[,i], col = "blue", cex = 3, cex.lab = 3, cex.axis = 3, cex.main = 3,
+			plot(mlb$target_wins  ~ mlb[,i], col = "blue", cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
 				 	ylab = "money_ball Score",
 				  	xlab = names(mlb[i]),
 				  	main = "Independent variable vs. money_ball Score")
@@ -142,7 +163,7 @@ Within the context of __World money_ball Day__ explore the data available from t
 
 			fit <- lm(mlb$target_wins ~ mlb[,i], na.action = na.exclude)
 			res <- resid(fit)
-			plot (mlb[,i], res, cex = 3, cex.lab = 3, cex.axis = 3, cex.main = 3,
+			plot (mlb[,i], res, cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
 				  ylab = "Residuals",
 				  xlab = names(mlb[i]),
 				  main = "Residuals from Linear Fit",
@@ -150,7 +171,79 @@ Within the context of __World money_ball Day__ explore the data available from t
 			abline (0, 0)
 			
 		}
-		dev.off()
+#		dev.off()
+	}
+
+```
+
+
+```{r plot first transforms, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	ln-transform if skewness >= 1
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+	cx_scale = 1
+# ... 	use cx_scale = 1 for in-line html knitted docs
+# ...	use cx_scale = 3 for pdf landscape mode knitted docs
+
+
+	for (i in 3 : length(mlb))
+	{
+		print(i)
+		if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric" || class(mlb[,i]) == "matrix")
+		{
+				  
+#			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
+			par (mfrow = c (1, 4))
+			
+			if (skewness(mlb[,i], na.rm = TRUE) >= 1)
+			{
+
+				plot(log(mlb[,i]), col = "cyan",
+					cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
+				  	xlab = names(mlb[i]),
+				  	main = "Independent variable sequence")
+
+				hist(log(mlb[,i]), main = names(mlb[i]), cex.lab = cx_scale, cex.main = cx_scale)
+				if (skewness(log(mlb[,i]), na.rm = TRUE) < 0)
+				{
+					txt_pos <- "topleft"
+				}
+				else {
+					txt_pos <- "topright"
+				}
+				legend(txt_pos, legend = c(paste("Mean =", round(mean(mlb[,i], na.rm = TRUE), 1)),
+								paste("Median =",round(median(mlb[,i], na.rm = TRUE), 1)),
+    	                        paste("Std.Dev =", round(sd(mlb[,i], na.rm = TRUE), 1)), 
+    	                        paste("Skewness =", round(skewness(mlb[,i], na.rm = TRUE), 1))), 
+    	            			bty = "n", cex = cx_scale)
+			
+			
+				plot(mlb$target_wins  ~ log(mlb[,i]), col = "blue",
+					 cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
+				 	 ylab = "money_ball Score",
+				  	 xlab = names(mlb[i]),
+				  	 main = "Independent variable vs. money_ball Score")
+				abline(lm(mlb$target_wins ~ log(mlb[,i])))
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	look at residuals from one-variable linear fit			
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+				fit <- lm(mlb$target_wins ~ log(mlb[,i]), na.action = na.exclude)
+				res <- resid(fit)
+				plot (log(mlb[,i]), res,
+					  cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
+					  ylab = "Residuals",
+					  xlab = names(mlb[i]),
+					  main = "Residuals from Linear Fit",
+					  col = "magenta")
+				abline (0, 0)
+			}
+			
+		}
+#		dev.off()
 	}
 
 ```
