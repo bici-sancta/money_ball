@@ -101,6 +101,20 @@ Within the context of __World money_ball Day__ explore the data available from t
 
 ```
 
+```{r derived variable, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	create derived variable - number of singles
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+	mlb$team_batting_1b <- mlb$team_batting_h - mlb$team_batting_2b - mlb$team_batting_3b - mlb$team_batting_hr
+	mlb$team_batting_tb <- mlb$team_batting_1b + mlb$team_batting_bb + 
+							2 * mlb$team_batting_2b + 3 * mlb$team_batting_3b + 4 * mlb$team_batting_hr +
+							mlb$team_baserun_sb - mlb$team_baserun_cs
+# ...	_tb does not include _hbp and _cs since those columns have high NA counts
+```
+
+
 ```{r plot base data, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
 
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -197,16 +211,17 @@ Within the context of __World money_ball Day__ explore the data available from t
 #			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
 			par (mfrow = c (1, 4))
 			
-			if (skewness(mlb[,i], na.rm = TRUE) >= 1)
+			if (skewness(mlb[,i], na.rm = TRUE) >= 0.9)
 			{
-
-				plot(log(mlb[,i]), col = "cyan",
+				xxx <- log(mlb[,i] + 1)
+				
+				plot(xxx, col = "cyan",
 					cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
 				  	xlab = names(mlb[i]),
 				  	main = "Independent variable sequence")
 
-				hist(log(mlb[,i]), main = names(mlb[i]), cex.lab = cx_scale, cex.main = cx_scale)
-				if (skewness(log(mlb[,i]), na.rm = TRUE) < 0)
+				hist(xxx, main = names(mlb[i]), cex.lab = cx_scale, cex.main = cx_scale)
+				if (skewness(xxx, na.rm = TRUE) < 0)
 				{
 					txt_pos <- "topleft"
 				}
@@ -220,20 +235,20 @@ Within the context of __World money_ball Day__ explore the data available from t
     	            			bty = "n", cex = cx_scale)
 			
 			
-				plot(mlb$target_wins  ~ log(mlb[,i]), col = "blue",
+				plot(mlb$target_wins  ~ xxx, col = "blue",
 					 cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
 				 	 ylab = "money_ball Score",
 				  	 xlab = names(mlb[i]),
 				  	 main = "Independent variable vs. money_ball Score")
-				abline(lm(mlb$target_wins ~ log(mlb[,i])))
+				abline(lm(mlb$target_wins ~ xxx))
 
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # ...	look at residuals from one-variable linear fit			
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-				fit <- lm(mlb$target_wins ~ log(mlb[,i]), na.action = na.exclude)
+				fit <- lm(mlb$target_wins ~ xxx, na.action = na.exclude)
 				res <- resid(fit)
-				plot (log(mlb[,i]), res,
+				plot (xxx, res,
 					  cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
 					  ylab = "Residuals",
 					  xlab = names(mlb[i]),
@@ -248,3 +263,5 @@ Within the context of __World money_ball Day__ explore the data available from t
 
 ```
 #### __Make first data visualization plot for each column of dataset__  
+
+
