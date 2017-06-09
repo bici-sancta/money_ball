@@ -265,3 +265,7 @@ Within the context of __World money_ball Day__ explore the data available from t
 #### __Make first data visualization plot for each column of dataset__  
 
 
+```{r baseline lm, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
+
+
+```
