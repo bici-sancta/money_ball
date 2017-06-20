@@ -19,47 +19,23 @@ library(moments)
 library(cowplot)
 library(grid)
 library(gridExtra)
+library(mice)
+library(VIM)
+library(stargazer)
 
 home_dir <- "~/_smu/_src/money_ball/"
 setwd(home_dir)
 
 data_dir <- "./data"
 
+	transform <- TRUE
+	impute <- TRUE
+	drop_xs <- FALSE
+
 ```
 
 ## money_ball - Regression Project -
 
-
-### __Intro__  
-
-*** 
-The following __Context__ and __Content__ is from : https://www.kaggle.com/unsdsn/world-money_ball  
-
-
-
-#### __Objective__
-
-Within the context of __World money_ball Day__ explore the data available from the the United Nations survey and idneitfy the characteristics that are associated with higher __money_ball__ scores
-
-*** 
-### __Descriptive statistics__  
-
-*** 
-
-### __Analysis__  
-
-*** 
-
-### __Interpretation__  
-
-*** 
-
-### __Conclusion__  
-
-*** 
-
-
-  
   
 #### __Setup some data directories  
 
@@ -82,7 +58,49 @@ Within the context of __World money_ball Day__ explore the data available from t
 	}
 ```
 
+
+```{r missing data summary, include = FALSE, message = FALSE}
+
+	md.pattern(mlb)
+
+	mice_plot <- aggr(mlb, col = c('navyblue','yellow'),
+                    numbers = TRUE,
+					sortVars = TRUE,
+                    labels = names(mlb),
+					cex.axis = .7,
+                    gap = 3,
+					ylab = c("Missing data","Pattern"))
+
+```
+
 #### __Remove extreme outliers from each column of numerical data__  
+
+```{r}
+
+# ...	remove rows where wins percentage is outside actual experience
+# ...		according to wikipedia
+# ...			least wins in modern era = 0.235 percentage
+# ...			most wins in modern era = 0.763 percentage
+# ...			most team hits in 1930 = 1783
+
+	mlb <- mlb[!(mlb$target_wins / 162) < 0.235,]
+	mlb <- mlb[!(mlb$target_wins / 162) > 0.763,]
+	
+	mlb <- mlb[!mlb$team_batting_h  > (1783 * 162 / 154),]
+	mlb <- mlb[!mlb$team_pitching_h > (1783 * 162 / 154),]
+	
+	mlb <- mlb[!mlb$team_baserun_sb  > (347 * 162 / 154),]
+	
+# ...	errors
+# ...		Pre WW II : 1883 Philadelphia (NL), 639. ... # of games in season = 98
+#...		Post WW II : 1945 Philadelphia (NL), 234 or 1946 Washington (AL), 211. ... # of games = 154
+#...		Last time a team had 200 or errors was the 1963 NY Mets with 208. ... # of games = 162
+	
+	mlb <- mlb[!mlb$team_fielding_e  > (211 * 162 / 154),]
+	
+	
+```
+
 
 ```{r derived variable, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
 
@@ -95,24 +113,49 @@ Within the context of __World money_ball Day__ explore the data available from t
 							mlb$team_batting_3b - 
 							mlb$team_batting_hr
 
+	mlb$team_pitching_123b <- mlb$team_pitching_h - mlb$team_pitching_hr
+
 # ...	Slugging percentage is the number of total bases divided by the number of at bats.
 # ...	Its formula is ([Singles] + [Doubles x 2] + [Triples x 3] + [Home Runs x 4])/[At Bats]
 
-	mlb$team_batting_ab <- mlb$team_batting_h + (27 * 162)
-
-	mlb$team_batting_slg <- mlb$team_batting_1b + 
+	mlb$imp_team_baserun_cs <- mlb$team_baserun_cs
+	mlb$imp_team_baserun_cs[is.na(mlb$imp_team_baserun_cs)] = median(mlb$imp_team_baserun_cs, na.rm = TRUE)
+	
+	mlb$team_batting_ab <- mlb$team_batting_h + (27 * 162) - mlb$imp_team_baserun_cs
+	
+	mlb$team_batting_slg <- (mlb$team_batting_1b + 
 							2 * mlb$team_batting_2b +
 							3 * mlb$team_batting_3b +
-							4 * mlb$team_batting_hr / mlb$team_batting_ab
+							4 * mlb$team_batting_hr) / mlb$team_batting_ab
 
 # ...	OBP = (Hits + Walks + Hit by Pitch) / (At Bats + Walks + Hit by Pitch + Sac Flies)
 	
-	mlb$team_batting_obp <- rowSums(mlb[,c("team_batting_h", "team_batting_bb", "team_batting_hbp")],
-							na.rm = TRUE)
+	mlb$imp_team_batting_hbp <- mlb$team_batting_hbp
+	mlb$imp_team_batting_hbp[is.na(mlb$imp_team_batting_hbp)] = median(mlb$imp_team_batting_hbp, na.rm = TRUE)
+
+	mlb$team_batting_obp <- rowSums(mlb[,c("team_batting_h",
+										   "team_batting_bb",
+										   "imp_team_batting_hbp")],
+										na.rm = TRUE)
 	
 	mlb$team_batting_obp <- mlb$team_batting_obp /
-							(rowSums(mlb[,c("team_batting_ab", "team_batting_bb", "team_batting_hbp")],
-							na.rm = TRUE) + 0.3 * 162)
+							(rowSums(mlb[,c("team_batting_ab",
+											"team_batting_bb",
+											"imp_team_batting_hbp")],
+											na.rm = TRUE)
+							 			+ 0.3 * 162)
+	
+# ...	delete temporary & unneeded variables - no longer needed
+
+	mlb$team_batting_h   <- NULL
+	mlb$team_batting_hbp <- NULL
+	mlb$team_baserun_cs  <- NULL
+	mlb$team_pitching_h  <- NULL
+	mlb$team_pitching_hr <- NULL
+
+	mlb$team_batting_ab      <- NULL
+	mlb$imp_team_baserun_cs  <- NULL
+	mlb$imp_team_batting_hbp <- NULL
 	
 ```
 
@@ -122,38 +165,102 @@ Within the context of __World money_ball Day__ explore the data available from t
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # ...	impute missing values to median
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	
-	for (i in 3 : length(mlb))
+
+#	imp_mlb <- mice(mlb, m = 5, maxit = 50, method = 'pmm', seed = 500)
+#	mlb <- imp_mlb
+
+
+	if (impute == TRUE)
 	{
-		if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric")
+		for (i in 3 : length(mlb))
 		{
-			mlb[,i][is.na(mlb[,i])] = median(mlb[,i], na.rm = TRUE)
-		}
-	}
-
-```
-
-
-
-```{r ln transform on left skewed variables, include = FALSE, message = FALSE}
-
-# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# ...	ln transform on left skewed variables
-# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	
-	for (i in 3 : length(mlb))
-	{
-		if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric")
-		{
-			if (skewness(mlb[,i], na.rm = TRUE) >= 0.9)
+			if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric")
 			{
-				mlb[,i] <- log(mlb[,i] + 1)
+				mlb[,i][is.na(mlb[,i])] = median(mlb[,i], na.rm = TRUE)
 			}
 		}
 	}
 
 ```
 
+
+```{r ln transform on right skewed variables, include = FALSE, message = FALSE}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	ln transform on right skewed variables
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	
+	if (transform == TRUE)
+	{
+		for (i in 3 : length(mlb))
+		{
+			if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric")
+			{
+				if (skewness(mlb[,i], na.rm = TRUE) >= 0.9)
+				{
+					col <- dim(mlb)[2] + 1
+					
+					mlb[col] <- log(mlb[,i] + 1)
+					
+					new_name <- paste0("log_", names(mlb[i]))
+					names(mlb)[col] <- new_name
+				}
+			}
+		}
+	}
+
+```
+
+
+```{r root transform on left skewed variables, include = FALSE, message = FALSE}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	sqrt transform on left skewed variables
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	
+	if (transform == TRUE)
+	{
+		for (i in 3 : length(mlb))
+		{
+			if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric")
+			{
+				if (skewness(mlb[,i], na.rm = TRUE) < -0.9)
+				{
+					col <- dim(mlb)[2] + 1
+					
+					mlb[col] <- sqrt(mlb[,i] + 1)
+					
+					new_name <- paste0("sqrt_", names(mlb[i]))
+					names(mlb)[col] <- new_name
+				}
+			}
+		}
+	}
+
+```
+
+
+```{r transform on selected columns, include = FALSE, message = FALSE}
+
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ...	 transform on selected variables based on visual inspection of residuals, fits, distributions, etc.
+# ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	
+
+	if (transform == TRUE)
+	{
+		col <- dim(mlb)[2] + 1
+		mlb[col] <- mlb$team_batting_hr * mlb$team_batting_hr
+		new_name <- paste0("pow2_", "team_batting_hr")
+		names(mlb)[col] <- new_name
+
+		col <- dim(mlb)[2] + 1
+		mlb[col] <- sqrt(mlb$team_batting_hr)
+		new_name <- paste0("sqrt_", "team_batting_hr")
+		names(mlb)[col] <- new_name
+	}
+
+```
 
 ```{r remove 5sigma outliers, include = FALSE, message = FALSE}
 
@@ -170,13 +277,6 @@ Within the context of __World money_ball Day__ explore the data available from t
 		}
 	}
 
-# ...	remvoe rows where wins percentage is outside actual experience
-# ...		according to wikipedia
-# ...			least wins in modern era = 0.235 percentage
-# ...			most wins in modern era = 0.763 percentage
-
-	mlb <- mlb[!(mlb$target_wins / 162) < 0.235,]
-	mlb <- mlb[!(mlb$target_wins / 162) > 0.763,]
 
 ```
 
@@ -187,7 +287,7 @@ Within the context of __World money_ball Day__ explore the data available from t
 # ...	make some plots for numeric variables .....
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-	cx_scale = 3
+	cx_scale = 1
 # ... 	use cx_scale = 1 for in-line html knitted docs
 # ...	use cx_scale = 3 for pdf landscape mode knitted docs
 
@@ -205,7 +305,9 @@ Within the context of __World money_ball Day__ explore the data available from t
 
 	for (i in 3 : length(mlb))
 	{
-		if(class(mlb[,i]) == "integer" || class(mlb[,i]) == "numeric" || class(mlb[,i]) == "matrix")
+		if(class(mlb[,i]) == "integer"
+		   					|| class(mlb[,i]) == "numeric"
+		   					|| class(mlb[,i]) == "matrix")
 		{
 				  
 #			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
@@ -231,7 +333,12 @@ Within the context of __World money_ball Day__ explore the data available from t
                   bty = "n", cex = cx_scale)
 			
 			
-			plot(mlb$target_wins  ~ mlb[,i], col = "blue", cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
+			plot(mlb$target_wins  ~ mlb[,i],
+				 		col = "blue",
+				 		cex = cx_scale,
+				 		cex.lab = cx_scale,
+				 		cex.axis = cx_scale,
+				 		cex.main = cx_scale,
 				 	ylab = "money_ball Score",
 				  	xlab = names(mlb[i]),
 				  	main = "Independent variable vs. money_ball Score")
@@ -262,14 +369,30 @@ Within the context of __World money_ball Day__ explore the data available from t
 
 ```{r baseline lm, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
 
-
 	model_df <- mlb
+
 	model_df$index <- NULL
-#	model_df$team_batting_hbp <- NULL
-#	model_df$team_batting_1b <- NULL
-#	model_df$team_batting_h <- NULL
-#	model_df$team_batting_tb <- NULL
-#	model_df$team_baserun_cs <- NULL
+	
+#	model_df$team_batting_slg <- NULL
+#	model_df$team_batting_obp <- NULL
+
+	if (drop_xs == TRUE)
+	{
+		model_df$team_baserun_sb <- NULL
+		model_df$team_fielding_dp <- NULL
+	
+# ...	successively remove columns with highest VIF values
+	
+		model_df$team_batting_hr <- NULL
+		model_df$team_batting_bb <- NULL
+		model_df$team_batting_so <- NULL
+
+# ...	remove columns with p_value > 0.05
+
+		model_df$team_batting_2b <- NULL
+		model_df$team_baserun_cs <- NULL
+	}
+	
 
 	first_model <- lm(target_wins ~ ., data = model_df, na.action = na.exclude)
 	first_pred <- predict(first_model)
@@ -281,18 +404,49 @@ Within the context of __World money_ball Day__ explore the data available from t
 		  col = "magenta")
 	
 	summary(first_model)
+	
+	ld.vars <- attributes(alias(first_model)$Complete)$dimnames[[1]]
+
+	#remove the linearly dependent variables variables
+#	formula.new <- as.formula(
+#	    paste(
+#	        paste(deparse(formula), collapse=""), 
+#	        paste(ld.vars, collapse="-"),
+#	        sep="-"
+#	    )
+#	)	
+	
+	
+	
+	vif_lst <- vif(first_model)
+	vif_lst[order(vif_lst)]
+	
 ```
 
 ```{r full lm with interactions, echo = FALSE, message = FALSE, comment = "", fig.width = 12}
-#	model_df$team_batting_1b <- NULL
 
-	model_df <- mlb
 	model_df$index <- NULL
-#	model_df$team_batting_hbp <- NULL
-#	model_df$team_batting_1b <- NULL
-#	model_df$team_batting_h <- NULL
-#	model_df$team_batting_tb <- NULL
-#	model_df$team_baserun_cs <- NULL
+
+	if (drop_xs == TRUE)
+	{
+		model_df$team_batting_hbp <- NULL
+		model_df$team_batting_h <- NULL
+		model_df$team_baserun_sb <- NULL
+		model_df$team_fielding_dp <- NULL
+	
+# ...	successively remove columns with highest VIF values
+	
+		model_df$team_batting_hr <- NULL
+		model_df$team_batting_bb <- NULL
+		model_df$team_batting_slg <- NULL
+		model_df$team_batting_obp <- NULL
+		model_df$team_batting_so <- NULL
+
+# ...	remove columns with p_value > 0.05
+
+		model_df$team_batting_2b <- NULL
+		model_df$team_baserun_cs <- NULL
+	}
 
 	interxn_model <- lm(target_wins ~ .*., data = model_df, na.action = na.exclude)
 	interxn_pred <- predict(interxn_model)
