@@ -2,7 +2,7 @@
 title: "world money_ball - kaggle dataset"
 author: "patrick mcdevitt (& collaboration with preeti swaminathan)"
 date: "04 juin 2017"
-output: pdf_document
+output: html_document
 classoption: landscape
 ---
 
@@ -287,7 +287,7 @@ data_dir <- "./data"
 # ...	make some plots for numeric variables .....
 # ...	-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-	cx_scale = 1
+	cx_scale = 2.5
 # ... 	use cx_scale = 1 for in-line html knitted docs
 # ...	use cx_scale = 3 for pdf landscape mode knitted docs
 
@@ -310,7 +310,7 @@ data_dir <- "./data"
 		   					|| class(mlb[,i]) == "matrix")
 		{
 				  
-#			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
+			png (filename = paste0(names(mlb[i]), "_%02d.png"), width = 1800, height = 600)
 			par (mfrow = c (1, 4))
 
 			plot(mlb[,i], col = "cyan",
@@ -358,7 +358,7 @@ data_dir <- "./data"
 			abline (0, 0)
 			
 		}
-#		dev.off()
+		dev.off()
 	}
 
 ```
@@ -373,8 +373,25 @@ data_dir <- "./data"
 
 	model_df$index <- NULL
 	
+# ...	remove features based on VIF
+	model_df$team_batting_obp     <- NULL 	# ...	( 1st removal)
+	model_df$team_batting_hr      <- NULL 	# ...	( 2nd removal, vif = 3140, adj_r2 = 0.41)
+	model_df$team_batting_bb      <- NULL 	# ...	( 3rd removal, vif = 1193, adj_r2 = 0.40)
+	model_df$team_batting_so      <- NULL 	# ...	( 4th removal, vif =  898, adj_r2 = 0.40)
+	model_df$team_batting_slg     <- NULL 	# ...	( 5th removal, vif =  886, adj_r2 = 0.40)
+	model_df$log_team_batting_obp <- NULL 	# ...	( 6th removal, vif =  200, adj_r2 = 0.40)
+	model_df$team_batting_3b      <- NULL 	# ...	( 7th removal, vif =   20, adj_r2 = 0.40)
+	model_df$team_pitching_123b   <- NULL 	# ...	( 8th removal, vif =   15, adj_r2 = 0.39)
+	model_df$sqrt_team_batting_hr <- NULL 	# ...	( 9th removal, vif =  9.5, adj_r2 = 0.39)
+# ...	---- next 2 steps if process followed .... stop when all VIF < 5
+#	model_df$team_pitching_so     <- NULL 	# ...	(10th removal, vif =  3.6, adj_r2 = 0.38)
+#	model_df$team_pitching_so     <- NULL 	# ...	(11th removal, vif =  2.0, adj_r2 = 0.35)
+	
+# ...	after high VIF removals, _2b has negative coefficient, so remove ...
+	
+	model_df$team_batting_2b      <- NULL 	# ...	(10th removal, p = 0.0023, adj_r2 = 0.38)
+	
 #	model_df$team_batting_slg <- NULL
-#	model_df$team_batting_obp <- NULL
 
 	if (drop_xs == TRUE)
 	{
@@ -396,12 +413,17 @@ data_dir <- "./data"
 
 	first_model <- lm(target_wins ~ ., data = model_df, na.action = na.exclude)
 	first_pred <- predict(first_model)
+
+# ...	plot to file ...	
+	png (filename = "baseline.png", width = 1800, height = 600)	
 	plot (model_df$target_wins, first_pred,
 		  cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
 		  ylab = "Observed Wins",
 		  xlab = "Predicted Wins",
 		  main = "Pred vs. Observed from Linear Fit",
 		  col = "magenta")
+	dev.off()
+	
 	
 	summary(first_model)
 	
@@ -450,12 +472,16 @@ data_dir <- "./data"
 
 	interxn_model <- lm(target_wins ~ .*., data = model_df, na.action = na.exclude)
 	interxn_pred <- predict(interxn_model)
+
+# ...	full interaction plot pred vs obs	
+	png (filename = "full_interaction.png", width = 1800, height = 600)	
 	plot (model_df$target_wins, interxn_pred,
 		  cex = cx_scale, cex.lab = cx_scale, cex.axis = cx_scale, cex.main = cx_scale,
 		  ylab = "Observed Wins",
 		  xlab = "Predicted Wins",
 		  main = "Pred vs. Observed from Linear Fit with Interactions",
-		  col = "magenta")
+		  col = "darkslateblue")
+	dev.off()
 	
 	summary(interxn_model)
 ```

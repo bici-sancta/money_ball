@@ -2,7 +2,7 @@
 title: "world money_ball - kaggle dataset"
 author: "patrick mcdevitt (& collaboration with preeti swaminathan)"
 date: "04 juin 2017"
-output: html_document
+output: pdf_document
 classoption: landscape
 ---
 
@@ -11,6 +11,7 @@ classoption: landscape
 # money_ball
 example of ordinary logistic regression model building techniques
 
+![](header_image.png)  
 
 ## 1. DATA EXPLORATION (40 points)
 
@@ -51,13 +52,14 @@ d. Are any of the variables missing and need to be imputed “fixed”?
 
 ## 2. DATA PREPARATION (40 Points)
 
-Each variable was assessed for several relevant characteristics to decide potential improvements for incorporation (or not) into the regression model.
-* what is the percentage of missing values in that column ?
-* is there a strong correlation between each column and the other potential independent variables ?
-* what is the single parameter correlation to the dependent variable (target wins) ?
-* what is the skewness for each variable ?
-* is there a generally linear relationship to the target_wins ?
-* based on a linear single parameter regression fit, are the residuals from this fit uniformly distributed ?
+Each variable was assessed for several relevant characteristics to decide potential improvements for incorporation (or not) into the regression model.   
+
+ * what is the percentage of missing values in that column ?  
+ * is there a strong correlation between each column and the other potential independent variables ?  
+ * what is the single parameter correlation to the dependent variable (target wins) ?  
+ * what is the skewness for each variable ?  
+ * is there a generally linear relationship to the target_wins ?  
+ * based on a linear single parameter regression fit, are the residuals from this fit uniformly distributed ?  
 
 All of the above questions resulted in making the following decisions / actions on the data set :  
 
@@ -75,12 +77,24 @@ All of the above questions resulted in making the following decisions / actions 
 
 ***  
 
+![###Provided data set : Team Batting Hits](team_batting_h_01.png)  
+
+***  
+
+![###Fabricated data set : Team Batting Singles](team_batting_1b_01.png)  
+***  
+
 4. __team_batting_slg__ - new predictor added (created) from some of the existing columns. "Slugging Percentage" (SLG) is traditionally a high value predictor in SABR metrics evaluations of win predictions : http://www.baseball-reference.com/bullpen/Slugging_percentage. Although all of the characteritics that constitue the generally accepted definition of slugging percentage, (at-bats is not a part of the data set), an estimate of at-bats can be inferred based on hits, outs produced from on-base runners, and minimum number af at-bats in a game.   
 
 ***
+![###Fabricated data set : Team Batting Singles](team_batting_slg_01.png)  
+
+***  
 
 5. __team_batting_obp__ - new predictor added. Similar to "slugging percentage", "on base percentage" (OBP) is another widely metric in SABR analyses for win predictions, http://www.baseball-reference.com/bullpen/On_base_percentage. Again, not all of the fundamental elements of OBP are included in the data set, so reasonable estimates, based on available data, were made for hit-by-pitch, sacrifice fly, and at-bats to create an estimate of OBP.  
 
+***  
+![###Fabricated data set : Team Batting Singles](team_batting_obp_01.png)  
 ***  
 
 6.  __team_pitching_h__, __team_pitching_123b__ (hits) - decomposed to create new predictor "team_pitching_123b" (singles, doubles, triples), with the idea that singles (_1b), doubles (_2b), triples (_3b), and home runs (_hr) are all a part of "hits", it is perhaps useful to separate out the potential influence of non-home-runs (_h) from the other hits, and then drop hits (_h) from the independent predictors data set. Similar to item (3), there is no loss of information from this choice.  
@@ -126,14 +140,31 @@ As stated above (item 1) team_batting_hbp and team_baserun_cs were dropped from 
 
 
 
-###### __That comprises the nine-rules of data preparation completed on this data set. There is an auspicious sort of conjuction in having nine rules of data preparation for a data set that is predicting baseball wins.__  
+###### __That comprises the ten-rules of data preparation completed on this data set. There is an auspicious sort of conjuction in having ten rules of data preparation for a data set that is predicting baseball wins - this went into extra innings ! __  
 ***  
 
 ## 3. BUILD MODELS (40 Points)
-
 Build at least three different LINEAR REGRESSION using different variables (or the same variables with different transformations). You may select the variables manually, use an approach such as Forward or Stepwise, use a different approach such as trees, or use a combination of techniques. Describe the techniques you used. If you manually selected a variable for inclusion into the model or exclusion into the model, indicate why this was done.
 
 Discuss the coefficients in the model, do they make sense? For example, if a team hits a lot of Home Runs, it would be reasonably expected that such a team would win more games. However, if the coefficient is negative (suggesting that the team would lose more games), then that needs to be discussed. Are you keeping the model even though it is counter intuitive? Why? The boss needs to know.
+
+### __Baseline Model__  
+
+![1](baseline.png)  
+
+![2](full_interaction.png)
+
+
+
+### Summary of Models Evaluated :  
+
+    Model            |  r²   |  Adj-r² | N features|  F-stat |  MSE |   RSE   |   Features retained
+    ---------------- |----------------------------------------------------------------------------------
+    Base             |
+    Full Interaction | 
+    SAS - Fwd        | 
+    SAS - LARS       | 
+
 
 ## 4. SELECT MODELS (40 Points)
 
